@@ -1,14 +1,14 @@
 # macOS
 .DS_Store
 
-# Книга и другие материалы под авторским правом — только локально
+# The book and other copyrighted material stay local
 reference/*
 !reference/README.md
 
-# Личные настройки Claude Code
+# Personal Claude Code settings
 .claude/settings.local.json
 
-# На будущее: зависимости и инструменты деплоя
+# For later: dependencies and deploy tools
 node_modules/
 .wrangler/
 .netlify/

@@ -1,66 +1,79 @@
-# Та-ти-ти (папка `kodaly`)
+# Ta-ti-ti (folder `kodaly`)
 
-Контекст для всех сессий Claude Code в этой папке. Полный анализ и план — в [docs/plan.md](docs/plan.md).
-Пользователь пишет по-русски: отвечать по-русски, коротко и просто.
+Context for every Claude Code session in this folder. Full analysis and plan: [docs/plan.md](docs/plan.md).
 
-## Что это
+- The user writes in Russian: reply in Russian, short and simple.
+- Everything in the repository is in English: code, comments, docs, commit messages. The one exception is the Russian dictionary in `src/i18n.js` and `README.ru.md`.
 
-Ритм-игрушка по слогам Кодая для взрослого, который с нуля учится читать ритм. Опора — книга Ottman & Rogers, Music for Sight Singing, глава 1 (упражнения 1.1–1.29: доля — четверть, деление пополам). Цель — не учёба, а игра: слушать, стучать, собирать своё.
+## What this is
 
-Что уже есть в `index.html`:
+A rhythm toy built on Kodály syllables, for an adult learning to read rhythm from scratch. It follows Ottman & Rogers, *Music for Sight Singing*, chapter 1 (exercises 1.1–1.29: the quarter note is the beat, divided in two). The goal is play, not study: listen, tap, build your own.
 
-- Размеры 2/4, 3/4, 4/4. Строчка — 8–9 долей: 4 такта в 2/4, 3 такта в 3/4, 2 такта в 4/4.
-- Генератор случайных ритмов, три уровня: без ти-ти / с ти-ти / с там-ти.
-- «Слушать»: такт счёта, потом метроном и тёплый тон на каждую ноту, текущий слог крупно на площадке.
-- «Стучать»: такт счёта, потом метроном без нот; удары пальцем по площадке, пробелом или Enter, Esc — стоп. Оценка каждой ноты: до 70 мс — в точку, до 150 мс — почти, дальше — мимо. Окно поиска удара — min(280 мс, 48% расстояния до соседней ноты). Учитывается `outputLatency`. В итоге выводится средний сдвиг и подсказка про задержку Bluetooth-наушников.
-- «Без конца»: ритмы идут подряд без паузы, следующая строчка видна заранее, счёт копится до «Стоп». Свой собранный ритм в этом режиме крутится по кругу.
-- «Собери свой»: кусочки та, ти-ти, та-а, та-а-а, та-а-а-а, пауза, там-ти встают в такты по порядку; кусочек, который не влезает в такт, неактивен.
-- Вид «Только ноты» (по умолчанию) и «С полосками» (длина звука, как piano roll).
-- Настройки хранятся в `localStorage` под ключом `tatiti`.
-- Две темы (светлая и тёмная), шрифты Unbounded, Golos Text и IBM Plex Mono.
+What the app does:
 
-## Решения, которые не трогать без спроса
+- Time signatures 2/4, 3/4, 4/4. A line is 8–9 beats: 4 bars of 2/4, 3 bars of 3/4, 2 bars of 4/4.
+- Random rhythm generator with three levels: no ti-ti / with ti-ti / with tam-ti.
+- "Listen": a count-in bar, then the metronome and a warm tone on every note; the current syllable is shown large on the pad.
+- "Tap": a count-in bar, then the metronome alone, no notes. Tap the pad with a finger, or press Space or Enter; Esc stops. Each note is graded: within 70 ms — on the beat, within 150 ms — close, further — miss. A tap is matched to a note within min(280 ms, 48% of the gap to the neighbouring note). `outputLatency` is taken into account. The summary shows the average offset and a hint about Bluetooth headphone delay.
+- "Endless": rhythms run back to back without a pause, the next line is visible in advance, the score adds up until "Stop". A rhythm you built loops in this mode.
+- "Build your own": the pieces ta, ti-ti, ta-a, ta-a-a, ta-a-a-a, rest, tam-ti fill the bars in order; a piece that does not fit the current bar is disabled.
+- Views: "Notes only" (default) and "With blocks" (sound length, like a piano roll).
+- Two languages, English by default; EN/RU switch in the header. The choice is saved and sets `<html lang>`.
+- Settings are stored in `localStorage` under the key `tatiti`.
+- Light and dark themes; fonts Unbounded, Golos Text and IBM Plex Mono.
 
-Это выводы из того, как пользователь им пользуется:
+## Decisions not to change without asking
 
-- По умолчанию вид «Только ноты». Во время «Стучать» ничего не бежит и не подсвечивается заранее: от бегущей линии начинаешь смотреть на картинку вместо того, чтобы слушать метроном.
-- Оценка появляется только после удара (нота меняет цвет), никогда подсказкой заранее.
-- Звук стука по умолчанию выключен, он сбивает. Кнопка «Звук стука» остаётся.
-- «Новый ритм» каждый раз свежий и случайный. Крутить одно и то же скучно, вариации лучше повторов.
-- Слоги: та, ти-ти, та-а, та-а-а, та-а-а-а, ш (пауза), там-ти. Новые длительности (шестнадцатые, лиги, синкопы, другая нота доли) добавлять только когда пользователь попросит.
-- Простота: один экран, без лишних настроек и онбординга.
-- На iPhone беззвучный режим глушит Web Audio, поэтому подсказка про это остаётся.
+These come from how the user actually plays with it:
 
-## Как работаем
+- "Notes only" is the default view. During "Tap" nothing moves and nothing is highlighted ahead: a running line makes you watch the picture instead of listening to the metronome.
+- A grade appears only after the tap (the note changes colour), never as a hint beforehand.
+- The tap sound is off by default: it throws you off. The "Tap sound" button stays.
+- "New rhythm" is fresh and random every time. Repeating the same one is boring; variations beat repetition.
+- Syllables: ta, ti-ti, ta-a, ta-a-a, ta-a-a-a, sh (rest), tam-ti — in Russian та, ти-ти, та-а, та-а-а, та-а-а-а, ш, там-ти. Add new durations (sixteenths, ties, syncopation, another beat note) only when the user asks.
+- Simplicity: one screen, no extra settings, no onboarding.
+- On iPhone, silent mode mutes Web Audio, so the hint about it stays.
 
-- По шагам. После каждого шага — коммит и короткий отчёт.
-- Маленькие коммиты, чтобы к любой версии можно было вернуться.
-- Перед деплоем и перед покупкой или настройкой чего-то внешнего — спросить.
-- Статический сайт: без бэкенда, без фреймворка, без сборки.
-- Перед каждым коммитом открыть страницу и проверить, что «Слушать», «Стучать», «Без конца» и «Собери свой» работают.
+## How we work
 
-## Как проверять
+- Step by step. After each step: a commit and a short report.
+- Small commits, so any version can be restored.
+- Ask before deploying anything new and before buying or setting up anything external. Pushing to `main` redeploys the site — that is the agreed routine.
+- Static site: no backend, no framework, no build step.
+- Before every commit, open the page and check that "Listen", "Tap", "Endless" and "Build your own" work, in both languages.
+- Work on `main` (the user's choice).
 
-На настоящем iPhone в Safari — с Bluetooth-наушниками и без; на компьютере в Chrome и Safari; в светлой и тёмной теме.
+## How to check
 
-Локально: `python3 -m http.server 8000` в корне и открыть http://localhost:8000. Пока приложение — один файл, его можно открыть и двойным щелчком. После разделения на ES-модули — только через сервер. Для встроенного браузера Claude есть `.claude/launch.json`.
+On a real iPhone in Safari — with Bluetooth headphones and without; on a computer in Chrome and Safari; in light and dark theme.
 
-## Задачи по порядку
+Locally: run `python3 -m http.server 8000` in the project root and open http://localhost:8000. ES modules do not load from `file://`. For Claude's built-in browser there is `.claude/launch.json` (port 5317).
 
-- [x] 0. `CLAUDE.md` с разделами «Что это» и «Решения».
-- [x] 1. Git. Первый коммит — `index.html` как есть («prototype from chat»), `.gitignore`. Дальше маленькие коммиты.
-- [ ] 2. Структура. Предложить: один файл или `index.html` + `styles.css` + `app.js` (ES-модули, без сборки). Чистые функции (генератор, оценка ударов, плюрализация) вынести отдельно. Поведение не менять.
-- [ ] 3. Два языка. По умолчанию английский, переключатель EN/RU в шапке; выбор запоминается и меняет `<html lang>`. Все тексты — в словаре. В английской версии слоги латиницей (ta, ti-ti, ta-a, ta-a-a, ta-a-a-a, sh, tam-ti), счёт one/two/three/four и «&» вместо «и». Множественное число через `Intl.PluralRules` (щелчок/щелчка/щелчков против click/clicks). Тексты на английском — простые и короткие, как в русской версии, без маркетинга.
-- [ ] 4. Тесты на чистые функции: генератор всегда заполняет такты ровно и не ставит паузу первой; оценка удара даёт правильные градации на границах 70 и 150 мс.
-- [ ] 5. Деплой. Статический хостинг (GitHub Pages, Cloudflare Pages или Netlify), HTTPS обязателен. Пока любой бесплатный адрес, свой домен — потом. Спросить перед деплоем.
-- [ ] 6. На экран «Домой». Manifest, иконка и service worker, чтобы приложение ставилось на iPhone как отдельное и работало без сети (в метро). Шрифты закэшировать или подключить локально.
+Useful check after a refactor: build the same rhythms with the chips and compare the SVG of the strip before and after — it should match byte for byte. The Russian version must still render exactly like the prototype.
 
-## Версия 2 и дальше (не начинать без просьбы)
+## Tasks in order
 
-Пользователь хочет потом добавить более сложные ритмы — это следующая версия. Что есть в главе 1 книги и чего пока нет в приложении: лиги (в том числе через тактовую черту), восьмая пауза, затакт, длинные паузы, двухголосные упражнения (разделы 3 и 5), другие ноты доли — 2/2, 3/2, 3/8 и т. п. (раздел 4). Подробности и что придётся переделать — в [docs/plan.md](docs/plan.md).
+- [x] 0. `CLAUDE.md` with "What this is" and "Decisions".
+- [x] 1. Git. First commit — the prototype `index.html` as is ("prototype from chat"), `.gitignore`. Small commits from then on.
+- [x] 2. Structure: `index.html` + `styles.css` + ES modules in `src/`, no build. Pure functions (generator, tap grading, plurals) in their own files. Behaviour unchanged.
+- [x] 3. Two languages. English by default, EN/RU switch in the header; the choice is remembered and sets `<html lang>`. All texts in a dictionary. English syllables in Latin letters (ta, ti-ti, ta-a, ta-a-a, ta-a-a-a, sh, tam-ti), count one/two/three/four and "&" instead of "и". Plurals via `Intl.PluralRules` (щелчок/щелчка/щелчков vs click/clicks). English texts are as plain and short as the Russian ones, no marketing.
+- [ ] 4. Tests for pure functions: the generator always fills bars exactly and never starts with a rest; tap grading gives the right grade at the 70 and 150 ms boundaries.
+- [x] 5. Deploy. GitHub Pages from the public repo `mopheadpersona/kodaly`, branch `main`, root folder. Site: https://mopheadpersona.github.io/kodaly/ (HTTPS). Every push to `main` redeploys. Own domain — later.
+- [ ] 6. Home screen. Manifest, icon and service worker, so the app installs on iPhone as a standalone app and works offline (in the metro). Fonts cached or served locally.
 
-## Где что лежит
+## Version 2 and later (do not start without being asked)
 
-- `index.html` — всё приложение (пока один файл: разметка, стили, скрипт).
-- `reference/` — книга (PDF, только глава 1). В git не попадает: это авторский материал, а репозиторий может стать публичным. Ритмы из книги не переписывать на сайт один в один — брать из неё, какие элементы и в каком порядке, а ритмы генерировать свои.
-- `docs/plan.md` — анализ и план.
+The user wants harder rhythms later — that is the next version. What chapter 1 of the book has and the app does not yet: ties (including across the bar line), the eighth rest, pick-ups (anacrusis), rests longer than a beat, two-part drills (sections 3 and 5), other beat notes — 2/2, 3/2, 3/8 and so on (section 4). Details and what has to change: [docs/plan.md](docs/plan.md).
+
+## Where things are
+
+- `index.html` — markup. English text by default; elements with `data-i18n` / `data-i18n-aria` are filled from the dictionary.
+- `styles.css` — styles and theme colours.
+- `src/app.js` — entry point: state, screen, sound, buttons.
+- `src/rhythm.js` — pieces, levels, random generator. Pure.
+- `src/grading.js` — tap grading: window, grade, matching. Pure.
+- `src/notation.js` — SVG notation: data in, markup out.
+- `src/i18n.js` — every text in English and Russian, syllables, plurals.
+- `reference/` — the book (PDF, chapter 1 only). Not in git: it is copyrighted and the repository is public. Do not copy the book's exercises into the app one to one — take from it which elements come in which order, and generate our own rhythms.
+- `docs/plan.md` — analysis and plan.
+- `README.md`, `README.ru.md` — the GitHub front page in English and Russian.

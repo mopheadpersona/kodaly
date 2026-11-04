@@ -1,166 +1,149 @@
-# Та-ти-ти: анализ и план
+# Ta-ti-ti: analysis and plan
 
-Дата: 4 ноября 2026. Контекст и правила — в [CLAUDE.md](../CLAUDE.md).
+Written 4 November 2026, updated as steps land. Context and rules: [CLAUDE.md](../CLAUDE.md).
 
-## Коротко
+## Where things stand
 
-- Прототип рабочий: «Слушать», «Стучать», «Без конца» и «Собери свой» проверены во встроенном браузере, ошибок в консоли нет.
-- Это один файл на 706 строк: разметка, стили и около 460 строк скрипта. Тексты (около сотни строк) вписаны прямо в код.
-- План: разнести на несколько файлов без сборки → два языка → тесты → хостинг → установка на айфон и работа без сети.
-- Хостинг проще всего на GitHub Pages: ты уже залогинен в `gh` как `mopheadpersona`. Адрес будет `https://mopheadpersona.github.io/kodaly/`, HTTPS бесплатно.
-- Версия 2 (сложные ритмы) — отдельный этап. Ниже — что в книге есть сверх нынешнего и что для этого придётся переделать.
+| Step | Status |
+|---|---|
+| 0–1. `CLAUDE.md`, git | done |
+| 2. Split into files | done — notation, chips and texts match the prototype byte for byte |
+| 3. English and Russian | done — English by default; the Russian version renders exactly like the prototype |
+| 4. Tests | next |
+| 5. Hosting | done — GitHub Pages, https://mopheadpersona.github.io/kodaly/ |
+| 6. Home screen and offline | after tests |
+| Version 2: harder rhythms | not started, only when asked |
 
-## Как это будет работать
+## How it works day to day
 
-**Папка.** Всё живёт в `~/kodaly`. Открываешь Claude Code в этой папке — я читаю `CLAUDE.md` и сразу знаю, что это, какие решения не трогать и на каком мы шаге.
+**Folder.** Everything lives in `~/kodaly`. Open Claude Code there and it reads `CLAUDE.md`: what the app is, which decisions not to touch, which step we are on.
 
-**Версии.** Каждый шаг — коммит в git. Вернуться к любой версии: «верни, как было до двух языков» — я найду коммит и откачу.
+**Versions.** Every step is a git commit. To go back: "restore how it was before two languages" — find the commit and revert.
 
-**Сайт.** Код лежит на GitHub. После каждого `git push` GitHub Pages сам выкладывает новую версию, примерно за минуту.
+**Site.** The code is on GitHub in the public repo `mopheadpersona/kodaly`. GitHub Pages publishes every push to `main`, in about a minute.
 
-**Айфон.** Открыть адрес в Safari → «Поделиться» → «На экран „Домой“». После шага 6 приложение запускается как отдельное, без адресной строки, и работает без сети.
+**iPhone.** Open the address in Safari → Share → Add to Home Screen. After step 6 it starts as a separate app without the address bar and works offline.
 
-**Кто что проверяет.** Я проверяю в браузере на компьютере: кнопки, ошибки, разметку, оба языка, обе темы, узкий экран. Звук я не слышу, поэтому задержку, наушники и беззвучный режим проверяешь ты на настоящем айфоне.
+**Who checks what.** Claude checks in a browser on the computer: buttons, errors, layout, both languages, both themes, a narrow screen. Claude cannot hear sound, so latency, headphones and silent mode are checked by the user on a real iPhone.
 
-## Что внутри прототипа
+## What is inside
 
-Скрипт состоит из шести частей:
+| Part | File | What it does | Pure? |
+|---|---|---|---|
+| Rhythm model | `src/rhythm.js` | `TYPES` (pieces and their length in beats), `LEVELS`, weights, `partsOf` | yes |
+| Generator | `src/rhythm.js` | `genItems({meter, level, rng})` fills the bars with random pieces by the level's rules | yes (randomness is passed in) |
+| Notation | `src/notation.js` | `svgItem`, `rowSvg`, `chipSvg` draw SVG by hand, one picture per piece | yes, apart from the current language |
+| Grading | `src/grading.js` | `gradeOf` (70/150 ms), `windowAt`, `findMatch` | yes |
+| Texts | `src/i18n.js` | dictionaries, `t()`, syllables, plurals via `Intl.PluralRules` | yes, apart from the current language |
+| Sound and screen | `src/app.js` | Web Audio (click, tone, tap sound — the whole line is scheduled ahead on the audio clock), pad, keyboard, buttons, `localStorage` | no |
 
-| Часть | Что делает | Чистая функция? |
-|---|---|---|
-| Модель ритма | `TYPES` (кусочки и их длина в долях), `LEVELS`, веса `W8`, `partsOf` | да |
-| Генератор | `genItems`: заполняет такты случайными кусочками по правилам уровня | почти: читает глобальные размер и уровень, берёт `Math.random` |
-| Нотация | `svgItem`, `rowSvg`: рисуют SVG вручную, отдельная картинка для каждого из 7 кусочков | почти: строка SVG из данных, но читает глобальное состояние |
-| Звук | Web Audio: щелчок, тон, звук стука; вся строчка планируется заранее по часам звука | нет |
-| Оценка ударов | окно поиска `winOf`, сопоставление `matchTap`, пропуски `sweep`, итог `summary` | ядро — да (градация 70/150 мс и окно) |
-| Интерфейс | кнопки, площадка, клавиатура, сохранение в `localStorage` | нет |
+Things noticed (not bugs, nothing to fix now):
 
-Что заметил (не ошибки, чинить сейчас не надо):
+1. **Generator.** It makes up to 40 tries to get a "good" line (has ti-ti on level 2, does not end on a rest). If all 40 fail it returns the last one. In practice this does not happen. Tests should check only what always holds: bars are filled exactly, no rest first, no two rests in a row, no piece crosses a bar line.
+2. **Tap time** is the audio clock when the tap is handled, not the moment of the touch itself. That adds a few milliseconds of error, fine for a 70 ms "on the beat". It could be refined later, but that changes behaviour — only if the user asks.
+3. **Headphone latency.** The app subtracts `outputLatency`. If Safari does not report it, zero is subtracted, so with Bluetooth headphones on iPhone taps look late. The summary hint about headphones covers exactly this. To check on the user's iPhone.
+4. **Silent mode.** Newer Safari has `navigator.audioSession`; setting its type to `playback` may let sound play in silent mode. Worth a small separate try. The hint stays either way.
+5. **Fonts** come from Google Fonts. Offline, system fonts show instead. Step 6 fixes that.
+6. **Hidden tab.** When the tab is not visible the browser slows down drawing. The sound stays exact; only the highlighting lags. That is normal.
 
-1. **Генератор** делает до 40 попыток, чтобы ритм был «хорошим» (есть ти-ти на 2-м уровне, не кончается паузой). Если все 40 не удались, отдаёт последнюю. На практике такого не бывает. Тесты проверяют то, что гарантировано всегда: такты заполнены ровно, первая нота не пауза, двух пауз подряд нет, кусочек не переходит через тактовую черту.
-2. **Время удара** берётся как текущее время звука в момент обработки нажатия, а не как время самого касания. Это даёт погрешность в несколько миллисекунд, для порога «в точку = 70 мс» терпимо. Уточнить можно потом, но это меняет поведение — только по твоей просьбе.
-3. **Задержка наушников.** Приложение вычитает `outputLatency`. Если Safari её не сообщает, вычитается ноль, поэтому с Bluetooth-наушниками на айфоне удары будут казаться поздними. Подсказка про наушники как раз об этом. Проверим на твоём айфоне, что он сообщает.
-4. **Беззвучный режим.** В новых версиях Safari есть `navigator.audioSession`. Если поставить ему тип `playback`, звук, возможно, будет играть и в беззвучном режиме. Можно попробовать отдельным маленьким шагом. Подсказку оставляем в любом случае.
-5. **Шрифты** грузятся с Google Fonts. Без сети вместо них будут системные. Это решает шаг 6.
-6. **Анимация на скрытой вкладке.** Если вкладка не на экране, браузер притормаживает обновление картинки. Звук при этом идёт точно, отстаёт только подсветка. Это нормально.
-
-## Шаг 2. Структура — моё предложение: разнести
+## Step 2. Structure — done
 
 ```
-index.html          разметка
-styles.css          стили, как есть
+index.html          markup
+styles.css          styles
 src/
-  app.js            точка входа: интерфейс, звук, кнопки
-  rhythm.js         кусочки, уровни, генератор, partsOf — чистые функции
-  grading.js        окно поиска, градация удара, сопоставление — чистые
-  notation.js       рисование SVG: данные → строка SVG
-  i18n.js           словари ru/en, t(), плюрализация (появится в шаге 3)
-tests/
-  rhythm.test.js
-  grading.test.js
-package.json        только "type": "module" и команда "test": "node --test", без зависимостей
+  app.js            entry point: screen, sound, buttons
+  rhythm.js         pieces, levels, generator — pure
+  grading.js        tap grading — pure
+  notation.js       SVG: data in, markup out
+  i18n.js           texts in English and Russian, plurals
 ```
 
-Почему разнести:
+Why split: tests can import the pure functions directly (Node 23 is installed, nothing else needed); git diffs show what actually changed; languages and version 2 go into their own files; there is still no build — the browser loads ES modules itself.
 
-- тесты импортируют чистые функции напрямую. Node 23 уже стоит, ставить ничего не нужно;
-- в git видно, что именно поменялось, а не «изменился один большой файл»;
-- два языка и версия 2 добавляются в свои файлы, а не в середину скрипта;
-- сборки нет, браузер сам грузит ES-модули.
+Downside: the page no longer opens with a double click, because ES modules do not load from `file://`. A local server is needed (`python3 -m http.server`). On the site everything works as usual. If a single file is ever needed again (say, to show the app in a plain chat), a small script can glue it back together.
 
-Минус: файл больше не открыть двойным щелчком. ES-модули не работают с `file://`, нужен локальный сервер (`python3 -m http.server`). На хостинге всё работает как обычно. Если понадобится снова один файл (например, показать в обычном чате), можно сделать маленький скрипт, который склеивает всё обратно.
+How behaviour was kept: code moved as is; functions that read global state now take parameters (`genItems({meter, level, rng})`, `geo(width, beats, view)`, `rowSvg(row, layout, options)`). Before the split, the same rhythms were built with the chips in every meter and view and the SVG was fingerprinted; after the split all 15 fingerprints matched. Then "Listen", "Tap" (with taps timed to the audio clock: 7 of 7 on the beat; 100 ms late → close), "Endless" and "Build your own" were run in the browser.
 
-Как не сломать поведение:
+## Step 3. Two languages — done
 
-- переносить код как есть; менять только то, что функции берут из глобального состояния, — они начнут получать это параметрами: `genItems({meter, level, rng})`;
-- до рефакторинга сохранить SVG нескольких фиксированных ритмов во всех видах. После — сравнить: картинки должны совпасть байт в байт;
-- в браузере пройти тот же сценарий, что сегодня: «Слушать», «Стучать», «Без конца», «Собери свой».
+- `src/i18n.js`: dictionaries `en` and `ru`, `t('key', {n})`. Every string from the markup and the script lives there.
+- Syllables: `та / ти-ти / та-а / та-а-а / та-а-а-а / ш / там-ти` ↔ `ta / ti-ti / ta-a / ta-a-a / ta-a-a-a / sh / tam-ti`. Pieces store a syllable key; the word is looked up when drawing, so switching language redraws everything.
+- Count on the pad: `раз два три четыре` ↔ `one two three four`. In the notation, `и` ↔ `&`.
+- Plurals via `Intl.PluralRules`: Russian has 1 щелчок / 2 щелчка / 5 щелчков / 11 щелчков / 21 щелчок; English 1 click / 2 clicks.
+- EN/RU switch in the header, disabled while something plays. Saved in `localStorage` `tatiti` (field `lang`); sets `<html lang>`, the tab title and screen-reader labels.
+- English by default. A Russian phone also opens in English first.
+- Checked: the Russian version gives the same 15 fingerprints as the prototype; the English one was read through and run; both fit a 375 px screen without horizontal scroll.
 
-## Шаг 3. Два языка
+## Step 4. Tests — next
 
-- `src/i18n.js`: словари `en` и `ru`, функция `t('ключ', {n})`. Все строки из разметки и скрипта переезжают туда.
-- Слоги — в словаре: `та / ти-ти / та-а / та-а-а / та-а-а-а / ш / там-ти` ↔ `ta / ti-ti / ta-a / ta-a-a / ta-a-a-a / sh / tam-ti`. У ти-ти и там-ти по два звука (`ти`+`ти`, `там`+`ти`), их тоже переводим по частям.
-- Счёт на площадке: `раз два три четыре` ↔ `one two three four`. В нотах `и` ↔ `&`.
-- Множественное число через `Intl.PluralRules`: русский различает 1 щелчок / 2 щелчка / 5 щелчков / 11 щелчков / 21 щелчок, английский — 1 click / 2 clicks.
-- Переключатель EN/RU в шапке. Выбор хранится в том же `localStorage` `tatiti` (новое поле `lang`), меняет `<html lang>`, заголовок вкладки и подписи для скринридера.
-- По умолчанию английский, как в задании.
-- Проверить, что английские строки не ломают вёрстку на узком экране.
+`node --test`, no libraries. A `package.json` with only `"type": "module"` and a `test` script.
 
-## Шаг 4. Тесты
+- **Generator**: every meter × every level × thousands of runs. Each bar is filled exactly; no piece crosses a bar line; no rest first; no two rests in a row; ta-a-a-a only at the start of a bar.
+- **Grading**: 0 and ±70 ms — on the beat; ±70.1 and ±150 ms — close; ±150.1 ms — miss. Window: min(280 ms, 48% of the gap to the neighbour).
+- **Plurals**: 1, 2, 5, 11, 21, 22, 112 in Russian; 1 and 2 in English.
+- Sound and screen are not covered by tests — they are checked in the browser.
 
-`node --test`, без библиотек.
+## Step 5. Hosting — done
 
-- **Генератор**: все размеры × все уровни × тысячи прогонов. Каждый такт заполнен ровно; кусочек не пересекает тактовую черту; первая нота не пауза; двух пауз подряд нет; та-а-а-а только с начала такта.
-- **Оценка удара**: 0 и ±70 мс — «в точку»; ±70,1 и ±150 мс — «почти»; ±150,1 мс — «мимо». Окно поиска: min(280 мс, 48% до соседней ноты).
-- **Плюрализация**: 1, 2, 5, 11, 21, 22, 112 по-русски; 1 и 2 по-английски.
-- Звук и экран тестами не покрываются — их проверяю в браузере.
-
-## Шаг 5. Хостинг
-
-|  | GitHub Pages | Cloudflare Pages | Netlify |
+| | GitHub Pages | Cloudflare Pages | Netlify |
 |---|---|---|---|
-| Адрес | `mopheadpersona.github.io/kodaly` | `kodaly.pages.dev`, если имя свободно | `kodaly.netlify.app` |
-| Что нужно | ничего: `gh` уже залогинен | аккаунт Cloudflare + программа `wrangler` | аккаунт Netlify + их программа |
-| Как обновлять | `git push` — само | команда деплоя или подключить репозиторий | так же |
-| Репозиторий | на бесплатном тарифе — публичный | может быть приватным | может быть приватным |
-| Свой домен потом | да | да, проще всего, если домен в Cloudflare | да |
+| Address | `mopheadpersona.github.io/kodaly` | `kodaly.pages.dev` if free | `kodaly.netlify.app` |
+| What it needs | nothing: `gh` is already signed in | a Cloudflare account + `wrangler` | a Netlify account + their CLI |
+| Updating | `git push` | a deploy command or a connected repo | same |
+| Repository | public on the free plan | can be private | can be private |
+| Own domain later | yes | yes, easiest if the domain is on Cloudflare | yes |
 
-HTTPS везде бесплатно и автоматически.
+Chosen: **GitHub Pages**, public repo `mopheadpersona/kodaly`, branch `main`, root folder. HTTPS is automatic. No new accounts; publishing is a normal `git push`. The book is not in the repo (`.gitignore`).
 
-**Рекомендую GitHub Pages.** Новых аккаунтов не нужно, обновление — обычный `git push`. Минус: код будет виден всем. Книга в репозиторий не попадёт, она в `.gitignore`. Если код должен быть закрытым — Cloudflare Pages.
+The site lives under `/kodaly/`, not at the domain root. All paths in the project are relative, and step 6 (icons, service worker scope) has to keep that in mind.
 
-**Задеплоить можно сразу**, прототип как есть. Тогда ссылка на айфоне будет уже сегодня, и каждый следующий шаг будет сразу проверяться там. Порядок деплоя: создать репозиторий `mopheadpersona/kodaly` → `git push` → включить Pages → проверить адрес.
+## Step 6. Home screen and offline
 
-Мелочь: сайт будет жить не в корне домена, а в `/kodaly/`. Все пути в проекте должны быть относительными (сейчас так и есть), иконки и service worker это учтут.
+- `manifest.webmanifest`: name "Ta-ti-ti", standalone display without the address bar, theme colours, icons 192 and 512.
+- `apple-touch-icon` 180×180 — iPhone takes the icon from here, not from the manifest. A simple icon in the app's style (a note or "ta"), shown to the user before committing.
+- `sw.js` service worker: caches every app file, the fonts and icons; serves from cache and fetches the new version in the background. A new version shows from the next launch. The cache version changes with every deploy.
+- Fonts served locally from `fonts/`: Unbounded, Golos Text, IBM Plex Mono, Latin + Cyrillic, about 10 woff2 files. All three are under the OFL, so they may live in the repo. The Google Fonts link goes away: faster, and works offline.
+- A service worker needs HTTPS, so this comes after hosting. It also goes last because the cache gets in the way of seeing fresh versions during development.
+- On iPhone, the Home Screen app keeps its settings separately from Safari: meter, tempo, view and language have to be picked once more.
+- Check: airplane mode → open from the Home Screen → everything works, with its own fonts.
 
-## Шаг 6. На экран «Домой» и без сети
+## Version 2: harder rhythms
 
-- `manifest.webmanifest`: имя «Та-ти-ти» / "Ta-ti-ti", полноэкранный режим без адресной строки, цвета из темы, иконки 192 и 512.
-- `apple-touch-icon` 180×180 — айфон берёт иконку отсюда, а не из манифеста. Иконку нарисую простую, в стиле приложения (нота или «та»), покажу до коммита.
-- `sw.js` — service worker. Кладёт в кэш все файлы приложения, шрифты и иконки. Отдаёт из кэша, а новую версию подтягивает в фоне. Обновление видно со следующего запуска. Номер версии кэша меняется при каждом деплое.
-- Шрифты — локально в `fonts/`: Unbounded, Golos Text, IBM Plex Mono, латиница + кириллица, около 10 файлов woff2. Все три шрифта под лицензией OFL, класть их в проект можно. Ссылка на Google Fonts уходит: быстрее и без сети работает.
-- Service worker работает только по HTTPS, поэтому шаг 6 — после хостинга. Делать его последним правильно ещё и потому, что кэш мешает видеть свежие версии во время разработки.
-- На айфоне приложение с экрана «Домой» хранит настройки отдельно от Safari. Размер, темп и вид придётся один раз выбрать заново.
-- Проверка: включить авиарежим → открыть с экрана «Домой» → всё работает, шрифты свои.
+Not started — this is the next stage. `reference/` has only chapter 1 (exercises 1.1–1.61). The app now covers sections 1–2, except ties and pick-ups.
 
-## Версия 2: сложные ритмы
-
-Пока не начинаем — это следующий этап. В `reference/` лежит только глава 1 (упражнения 1.1–1.61). Сейчас приложение покрывает разделы 1–2, кроме лиг и затакта.
-
-| Раздел книги | Упражнения | Что там | В приложении |
+| Book section | Exercises | What is there | In the app |
 |---|---|---|---|
-| 1. Доля — четверть, ноты от доли и длиннее | 1.1–1.10 | та, та-а, та-а-а, та-а-а-а, паузы, затакт | есть, кроме затакта и пауз длиннее доли |
-| 2. Деление доли пополам, точки и лиги | 1.11–1.24 | ти-ти, там-ти, лиги (в том числе через тактовую черту), восьмая пауза | ти-ти и там-ти есть; лиг и восьмой паузы нет |
-| 3. Двухголосие | 1.25–1.29 | две строчки сразу: две руки, или голос + рука | нет |
-| 4. Другие ноты доли | 1.30–1.53 | 2/2, ¢, 3/2, 4/2, 3/8, 4/8: звучит так же, пишется иначе | нет |
-| 5. Двухголосие в других долях | 1.54–1.61 | — | нет |
+| 1. Quarter-note beat, beat note and longer | 1.1–1.10 | ta, ta-a, ta-a-a, ta-a-a-a, rests, pick-ups | yes, except pick-ups and rests longer than a beat |
+| 2. The beat divided in two; dots and ties | 1.11–1.24 | ti-ti, tam-ti, ties (also across the bar line), eighth rest | ti-ti and tam-ti yes; no ties, no eighth rest |
+| 3. Two-part drills | 1.25–1.29 | two lines at once: two hands, or voice + hand | no |
+| 4. Other beat notes | 1.30–1.53 | 2/2, ¢, 3/2, 4/2, 3/8, 4/8: sounds the same, written differently | no |
+| 5. Two-part drills with other beat notes | 1.54–1.61 | — | no |
 
-Дальше в книге (шестнадцатые, 6/8, синкопы) — другие главы. Если есть их файлы, клади в `reference/`.
+Later chapters of the book (sixteenths, 6/8, syncopation) are not in `reference/` yet.
 
-**Что придётся переделать:**
+**What has to change:**
 
-1. **Модель ритма.** Сейчас кусочек — целые доли внутри одного такта. Для лиг через тактовую черту и затакта нужна модель «звуки с длительностью», а такты — разметка поверх.
-2. **Ритмы — данными, а не кодом.** Кусочки (слоги на двух языках, длина, как рисовать) и уровни (какие кусочки и с какими весами) — в одном файле данных. Новый ритм — новая строчка данных, генератор не трогаем.
-3. **Нотация** — самое трудное. Сейчас 7 фигур нарисованы вручную. Для лиг, восьмых пауз, группировки восьмых по четыре и других нот доли (половинная как доля — те же слоги, другие картинки) нужен более общий рисовальщик. Два пути:
-   - расширять свой: тот же вид, лёгкий, но больше работы;
-   - взять библиотеку нотации (VexFlow или abcjs): правильная нотация из коробки, но тяжелее и выглядит иначе.
+1. **Rhythm model.** Today a piece is whole beats inside one bar. Ties across the bar line and pick-ups need a model of "sounds with durations", with bars as a layer on top.
+2. **Rhythms as data, not code.** Pieces (syllables in both languages, length, how to draw) and levels (which pieces, which weights) in one data file. A new rhythm is a new data row; the generator stays as it is.
+3. **Notation** — the hardest part. Seven figures are drawn by hand today. Ties, eighth rests, eighths beamed in fours and other beat notes (a half note as the beat — same syllables, different pictures) need a more general drawer. Two ways:
+   - extend our own: same look, lightweight, more work;
+   - use a notation library (VexFlow or abcjs): correct notation out of the box, but heavier and a different look.
 
-   Решим, когда дойдём.
-4. **Уровни.** Три кнопки превратятся в лестницу по разделам книги. Надо сохранить «один экран»: например, одна строчка «уровень: 1 2 3 4 5…», а не меню.
-5. **Двухголосие** — новый режим. Приложение играет одну строчку, ты стучишь другую. Или площадка делится на две половины для двух рук; на компьютере — две клавиши (например, F и J).
+   Decide when we get there.
+4. **Levels.** Three buttons become a ladder following the book's sections. Keep "one screen": for example one row "level: 1 2 3 4 5…", not a menu.
+5. **Two-part drills** — a new mode. The app plays one line and you tap the other. Or the pad splits into two halves for two hands; on a computer, two keys (for example F and J).
 
-**Про авторские права.** Книгу берём как ориентир: какие элементы и в каком порядке. Ритмы генерируем свои, как сейчас. Переписывать упражнения из книги один в один на публичный сайт не стоит. Для себя, локально, — можно.
+**Copyright.** The book is a guide: which elements, in which order. The app generates its own rhythms, as now. The book's exercises should not be copied one to one onto a public site. Locally, for personal use, they can be.
 
-## Что проверить на айфоне
+## What to check on the iPhone
 
-- Беззвучный режим: подсказка на месте, со звуком всё играет.
-- С Bluetooth-наушниками и без: какой средний сдвиг показывает итог «Стучать».
-- Светлая и тёмная тема.
-- После шага 6: установка на экран «Домой», запуск в авиарежиме, обновление после деплоя.
+- Silent mode: the hint is there; with sound on, everything plays.
+- With Bluetooth headphones and without: what average offset the "Tap" summary shows.
+- Light and dark theme, English and Russian.
+- After step 6: install to the Home Screen, launch in airplane mode, update after a deploy.
 
-## Открытые вопросы
+## Open questions
 
-1. **Хостинг:** GitHub Pages с публичным репозиторием (рекомендую) или Cloudflare Pages с приватным?
-2. **Когда деплоить:** сразу прототип как есть (рекомендую) или после шага 2?
-3. **Язык при первом заходе:** всегда английский, как в задании. Если хочешь, чтобы русский телефон сразу открывал русскую версию, — скажи.
-4. **Адрес:** `…/kodaly/`. Если хочешь другое имя (например, `ta-ti-ti`), — до создания репозитория.
+1. Own domain — later, when there is one.
+2. Should a Russian phone open in Russian on the first visit? Now it is always English first, as asked.
