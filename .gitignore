@@ -1,0 +1,15 @@
+# macOS
+.DS_Store
+
+# Книга и другие материалы под авторским правом — только локально
+reference/*
+!reference/README.md
+
+# Личные настройки Claude Code
+.claude/settings.local.json
+
+# На будущее: зависимости и инструменты деплоя
+node_modules/
+.wrangler/
+.netlify/
+.vercel/
