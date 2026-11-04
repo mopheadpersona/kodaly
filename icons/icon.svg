@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- "ta ti-ti" on one staff line, ta lit in the accent colour as while playing. -->
+  <rect width="512" height="512" fill="#E7EBE6"/>
+  <line x1="40" y1="350" x2="472" y2="350" stroke="#9AA7A3" stroke-width="6"/>
+  <g fill="#B25C1C">
+    <ellipse cx="125" cy="350" rx="44" ry="32" transform="rotate(-20 125 350)"/>
+    <rect x="152" y="130" width="16" height="215"/>
+  </g>
+  <g fill="#1C2625">
+    <ellipse cx="257" cy="350" rx="44" ry="32" transform="rotate(-20 257 350)"/>
+    <ellipse cx="387" cy="350" rx="44" ry="32" transform="rotate(-20 387 350)"/>
+    <rect x="284" y="130" width="16" height="215"/>
+    <rect x="414" y="130" width="16" height="215"/>
+    <rect x="284" y="130" width="146" height="38"/>
+  </g>
+</svg>
