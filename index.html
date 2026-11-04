@@ -1,85 +1,92 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Та-ти-ти</title>
+<title>Ta-ti-ti</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Unbounded:wght@500;700&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+<!-- Texts below are the English defaults; src/i18n.js fills every [data-i18n] in the chosen language. -->
 <main class="wrap">
   <header>
-    <h1>Та-ти-ти</h1>
-    <p class="lead">Ритм как игрушка: послушай, постучи сам, собери свой. Один щелчок метронома — одно «та».</p>
+    <div class="title-row">
+      <h1 data-i18n="title">Ta-ti-ti</h1>
+      <div class="langs" role="group" data-i18n-aria="langLabel" aria-label="Language">
+        <button class="lv" type="button" data-lang="en" lang="en">EN</button>
+        <button class="lv" type="button" data-lang="ru" lang="ru">RU</button>
+      </div>
+    </div>
+    <p class="lead" data-i18n="lead">Rhythm as a toy: listen, tap it yourself, build your own. One metronome click is one “ta”.</p>
   </header>
 
-  <section class="meter" aria-label="Размер">
+  <section class="meter" data-i18n-aria="meterLabel" aria-label="Time signature">
     <div class="seg">
-      <button class="mbtn" type="button" id="m2" data-m="2" aria-label="Размер 2/4"><span class="frac"><b>2</b><b>4</b></span><span class="cells"><i></i><i></i></span></button>
-      <button class="mbtn" type="button" id="m3" data-m="3" aria-label="Размер 3/4"><span class="frac"><b>3</b><b>4</b></span><span class="cells"><i></i><i></i><i></i></span></button>
-      <button class="mbtn" type="button" id="m4" data-m="4" aria-label="Размер 4/4"><span class="frac"><b>4</b><b>4</b></span><span class="cells"><i></i><i></i><i></i><i></i></span></button>
+      <button class="mbtn" type="button" id="m2" data-m="2" aria-label="Time signature 2/4"><span class="frac"><b>2</b><b>4</b></span><span class="cells"><i></i><i></i></span></button>
+      <button class="mbtn" type="button" id="m3" data-m="3" aria-label="Time signature 3/4"><span class="frac"><b>3</b><b>4</b></span><span class="cells"><i></i><i></i><i></i></span></button>
+      <button class="mbtn" type="button" id="m4" data-m="4" aria-label="Time signature 4/4"><span class="frac"><b>4</b><b>4</b></span><span class="cells"><i></i><i></i><i></i><i></i></span></button>
     </div>
     <p class="explain" id="explain"></p>
   </section>
 
-  <section class="score" aria-label="Ритм">
+  <section class="score" data-i18n-aria="scoreLabel" aria-label="Rhythm">
     <div id="strip"></div>
-    <p class="caption">Ноты на одной линейке, как в книге. Вид «с полосками» добавляет длину звука, как piano roll в GarageBand. Цифры — счёт, «и» — ровно между щелчками.</p>
+    <p class="caption" data-i18n="caption">Notes on one line, like in the book. The “With blocks” view also shows how long each sound lasts, like the piano roll in GarageBand. Numbers are the count; “&amp;” falls exactly between clicks.</p>
   </section>
 
-  <div class="stage" id="stage" tabindex="0" role="button" aria-label="Площадка для стука">
+  <div class="stage" id="stage" tabindex="0" role="button" data-i18n-aria="padLabel" aria-label="Tap pad">
     <div class="dots" id="dots" aria-hidden="true"></div>
-    <div class="big dim" id="big">та</div>
+    <div class="big dim" id="big">ta</div>
     <div class="hint" id="hint" aria-live="polite"></div>
   </div>
 
-  <section class="controls" aria-label="Управление">
+  <section class="controls" data-i18n-aria="controlsLabel" aria-label="Controls">
     <div class="transport">
-      <button class="btn primary" type="button" id="listen">Слушать</button>
-      <button class="btn go" type="button" id="tapBtn">Стучать</button>
-      <button class="btn" type="button" id="fresh">Новый ритм</button>
+      <button class="btn primary" type="button" id="listen" data-i18n="listen">Listen</button>
+      <button class="btn go" type="button" id="tapBtn" data-i18n="tap">Tap</button>
+      <button class="btn" type="button" id="fresh" data-i18n="fresh">New rhythm</button>
     </div>
     <div class="knobs">
       <div class="knob">
-        <label class="label" for="bpm">Темп</label>
+        <label class="label" for="bpm" data-i18n="tempo">Tempo</label>
         <input type="range" id="bpm" min="40" max="120" step="2" value="60">
-        <output id="bpmOut" for="bpm">60</output><span class="unit">щелчков в минуту</span>
+        <output id="bpmOut" for="bpm">60</output><span class="unit" data-i18n="perMin">clicks per minute</span>
       </div>
       <div class="knob" role="group" aria-labelledby="modeLabel">
-        <span class="label" id="modeLabel">Режим</span>
-        <button class="lv" type="button" id="endless" aria-pressed="false">Без конца</button>
-        <button class="lv" type="button" id="tapSnd" aria-pressed="false">Звук стука</button>
+        <span class="label" id="modeLabel" data-i18n="mode">Mode</span>
+        <button class="lv" type="button" id="endless" aria-pressed="false" data-i18n="endless">Endless</button>
+        <button class="lv" type="button" id="tapSnd" aria-pressed="false" data-i18n="tapSnd">Tap sound</button>
       </div>
       <div class="knob" role="group" aria-labelledby="viewLabel">
-        <span class="label" id="viewLabel">Вид</span>
+        <span class="label" id="viewLabel" data-i18n="view">View</span>
         <div class="lvseg">
-          <button class="lv" type="button" id="vNotes" data-v="notes">Только ноты</button>
-          <button class="lv" type="button" id="vBars" data-v="bars">С полосками</button>
+          <button class="lv" type="button" id="vNotes" data-v="notes" data-i18n="vNotes">Notes only</button>
+          <button class="lv" type="button" id="vBars" data-v="bars" data-i18n="vBars">With blocks</button>
         </div>
       </div>
       <div class="knob" role="group" aria-labelledby="lvLabel">
-        <span class="label" id="lvLabel">Ритмы</span>
+        <span class="label" id="lvLabel" data-i18n="rhythms">Rhythms</span>
         <div class="lvseg">
-          <button class="lv" type="button" id="lv1" data-l="1">Без ти-ти</button>
-          <button class="lv" type="button" id="lv2" data-l="2">С ти-ти</button>
-          <button class="lv" type="button" id="lv3" data-l="3">С там-ти</button>
+          <button class="lv" type="button" id="lv1" data-l="1" data-i18n="lv1">No ti-ti</button>
+          <button class="lv" type="button" id="lv2" data-l="2" data-i18n="lv2">With ti-ti</button>
+          <button class="lv" type="button" id="lv3" data-l="3" data-i18n="lv3">With tam-ti</button>
         </div>
       </div>
     </div>
-    <p class="fine">На айфоне выключи беззвучный режим, иначе звука не будет. На компьютере стучи пробелом или Enter, Esc останавливает.</p>
+    <p class="fine" data-i18n="fine">On iPhone, turn off silent mode, or there will be no sound. On a computer, tap with Space or Enter; Esc stops.</p>
   </section>
 
   <section class="build" aria-labelledby="buildH">
-    <h2 id="buildH">Собери свой</h2>
-    <p class="note">Нажимай кусочки, они встанут в такты по порядку. Длина кусочка — сколько он тянется. Первое нажатие очищает дорожку. С «Без конца» твой ритм крутится по кругу.</p>
+    <h2 id="buildH" data-i18n="buildH">Build your own</h2>
+    <p class="note" data-i18n="buildNote">Tap the pieces and they fill the bars in order. The longer the piece, the longer it sounds. The first tap clears the track. With “Endless”, your rhythm loops.</p>
     <div class="chips" id="chips"></div>
     <div class="build-row">
       <span id="left"></span>
-      <button class="btn small" type="button" id="undo">Убрать последний</button>
-      <button class="btn small" type="button" id="clear">Очистить</button>
+      <button class="btn small" type="button" id="undo" data-i18n="undo">Remove last</button>
+      <button class="btn small" type="button" id="clear" data-i18n="clear">Clear</button>
     </div>
   </section>
 </main>

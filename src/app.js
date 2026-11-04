@@ -1,18 +1,17 @@
 // Entry point: state, screen, sound, buttons.
-import {TYPES,LABEL,CHIP_ORDER,totalBeats,beatsOf,partsOf,genItems} from './rhythm.js';
+import {TYPES,CHIP_ORDER,totalBeats,beatsOf,partsOf,genItems} from './rhythm.js';
 import {gradeOf,windowAt,findMatch} from './grading.js';
 import {geo,rowSvg,tickStr,chipSvg} from './notation.js';
-import {plural} from './i18n.js';
+import {LANGS,setLang,t,syl,pieceName,clicks} from './i18n.js';
 
 const $=id=>document.getElementById(id);
-const WORDS=['раз','два','три','четыре'];
-const NUM=['','','два','три','четыре'];
 const NS='http://www.w3.org/2000/svg';
 
 /* ---------- state ---------- */
-const S={meter:2,level:1,bpm:60,view:'notes',endless:false,tapSnd:false,items:[],custom:false,lastRow:null};
+const S={lang:'en',meter:2,level:1,bpm:60,view:'notes',endless:false,tapSnd:false,items:[],custom:false,lastRow:null};
 try{
   const sv=JSON.parse(localStorage.getItem('tatiti')||'{}');
+  if(LANGS.includes(sv.lang))S.lang=sv.lang;
   if([2,3,4].includes(sv.meter))S.meter=sv.meter;
   if([1,2,3].includes(sv.level))S.level=sv.level;
   if(sv.bpm>=40&&sv.bpm<=120)S.bpm=sv.bpm;
@@ -20,12 +19,12 @@ try{
   if(typeof sv.endless==='boolean')S.endless=sv.endless;
   if(typeof sv.tapSnd==='boolean')S.tapSnd=sv.tapSnd;
 }catch(e){}
-function save(){try{localStorage.setItem('tatiti',JSON.stringify({meter:S.meter,level:S.level,bpm:S.bpm,view:S.view,endless:S.endless,tapSnd:S.tapSnd}))}catch(e){}}
+function save(){try{localStorage.setItem('tatiti',JSON.stringify({lang:S.lang,meter:S.meter,level:S.level,bpm:S.bpm,view:S.view,endless:S.endless,tapSnd:S.tapSnd}))}catch(e){}}
 
 const stripEl=$('strip'),stage=$('stage'),big=$('big'),hint=$('hint'),dotsEl=$('dots'),explain=$('explain');
 const btnListen=$('listen'),btnTap=$('tapBtn'),btnFresh=$('fresh'),bpmIn=$('bpm'),bpmOut=$('bpmOut'),btnEndless=$('endless');
 const chipsEl=$('chips'),leftEl=$('left'),undoBtn=$('undo'),clearBtn=$('clear');
-const meterBtns=[...document.querySelectorAll('.mbtn')],lvBtns=[...document.querySelectorAll('[data-l]')],viewBtns=[...document.querySelectorAll('[data-v]')];
+const langBtns=[...document.querySelectorAll('[data-lang]')],meterBtns=[...document.querySelectorAll('.mbtn')],lvBtns=[...document.querySelectorAll('[data-l]')],viewBtns=[...document.querySelectorAll('[data-v]')];
 
 const total=()=>totalBeats(S.meter);
 const used=()=>beatsOf(S.items);
@@ -47,7 +46,7 @@ function renderStrip(){
   const G=geo(Math.round(stripEl.clientWidth)||640,total(),S.view),[a,b]=shownRows(),endless=run?run.endless:S.endless;
   const opts={endless,meter:S.meter,showSlots:!run};
   let html=rowSvg(a,G,{...opts,isNext:false});
-  if(b)html+=`<div class="nextlab">Дальше</div>`+rowSvg(b,G,{...opts,isNext:true});
+  if(b)html+=`<div class="nextlab">${t('rowNext')}</div>`+rowSvg(b,G,{...opts,isNext:true});
   stripEl.innerHTML=html;
   refs.G=G;refs.curSvg=stripEl.querySelector(`svg[data-row="${a.id}"]`);
   refs.ph=refs.curSvg?refs.curSvg.querySelector('.ph'):null;refs.active=-1;refs.onEls=[];
@@ -91,7 +90,7 @@ function flash(g){
   stage.classList.add(g?'hit-'+g:'hit');
   clearTimeout(flashT);flashT=setTimeout(()=>stage.classList.remove('hit','hit-good','hit-ok','hit-miss'),110);
 }
-function renderExplain(){explain.innerHTML=`<b>${S.meter}/4</b> — в такте ${NUM[S.meter]} «та». Такт — кусок между вертикальными чертами. Нижняя 4 значит, что «та» — это четверть: чёрная нота с палочкой.`;}
+function renderExplain(){explain.innerHTML=t('explain',{m:S.meter,num:t('num')[S.meter]});}
 
 /* ---------- audio ---------- */
 let ctx=null,master=null;
@@ -128,11 +127,11 @@ function hardStop(){if(run)run.nodes.forEach(o=>{try{o.stop()}catch(e){}});run=n
 
 /* ---------- playing ---------- */
 function setRunningUI(mode){
-  btnListen.textContent=mode==='listen'?'Стоп':'Слушать';
-  btnTap.textContent=mode==='tap'?'Стоп':'Стучать';
+  btnListen.textContent=mode==='listen'?t('stop'):t('listen');
+  btnTap.textContent=mode==='tap'?t('stop'):t('tap');
   btnListen.disabled=mode==='tap';btnTap.disabled=mode==='listen';
   btnFresh.disabled=!!mode;bpmIn.disabled=!!mode;btnEndless.disabled=!!mode;
-  meterBtns.forEach(b=>b.disabled=!!mode);lvBtns.forEach(b=>b.disabled=!!mode);
+  meterBtns.forEach(b=>b.disabled=!!mode);lvBtns.forEach(b=>b.disabled=!!mode);langBtns.forEach(b=>b.disabled=!!mode);
   stage.classList.toggle('armed',mode==='tap');
   updateChips();
 }
@@ -150,8 +149,8 @@ function scheduleRow(row){
 function addRow(){const last=run.rows[run.rows.length-1];const r=newRow(nextItems());r.start=last.start+run.rowDur;run.rows.push(r);scheduleRow(r);}
 
 function start(mode){
-  if(used()<total()){hint.textContent='Сначала дособери такты: осталось '+plural(total()-used())+'.';return;}
-  if(!ensureAudio()){hint.textContent='Этот браузер не умеет играть звук.';return;}
+  if(used()<total()){hint.textContent=t('needFill',{left:clicks(total()-used())});return;}
+  if(!ensureAudio()){hint.textContent=t('noAudio');return;}
   hardStop();clearMarks();
   const beat=60/S.bpm,lat=(ctx.outputLatency||ctx.baseLatency||0),T=total();
   const t0=ctx.currentTime+.15;
@@ -160,8 +159,8 @@ function start(mode){
   const r0=newRow(S.items.map(x=>({...x})));r0.start=t0+S.meter*beat;run.rows.push(r0);scheduleRow(r0);
   if(run.endless)addRow();
   setRunningUI(mode);renderStrip();
-  if(mode==='listen')hint.textContent=run.endless?'Первый такт — счёт. Дальше ритмы идут без остановки, проговаривай вместе со звуком.':'Первый такт — счёт. Потом проговаривай слоги вместе со звуком.';
-  else hint.textContent=run.endless?'Первый такт — счёт. Стучи пробелом, Enter или по площадке. Ритмы идут без остановки, следующая строчка видна заранее. Esc — стоп.':'Первый такт — счёт. Потом стучи начало каждой ноты: пробел, Enter или по площадке.';
+  if(mode==='listen')hint.textContent=t(run.endless?'listenEndless':'listenOnce');
+  else hint.textContent=t(run.endless?'tapEndless':'tapOnce');
   if(mode==='tap'){try{document.activeElement&&document.activeElement.blur&&document.activeElement.blur();}catch(e){}stage.focus({preventScroll:true});}
   requestAnimationFrame(frame);
 }
@@ -180,15 +179,15 @@ function sweep(now){
     if(o.t+windowAt(os,run.oi)<now){applyGrade(o,'miss',0);run.oi++;}else break;
   }
 }
-function matchTap(t){
-  const m=findMatch(run.onsets,run.oi,t);
+function matchTap(at){
+  const m=findMatch(run.onsets,run.oi,at);
   if(!m)return null;
   const o=run.onsets[m.index],g=gradeOf(m.delta);
   applyGrade(o,g,m.delta);return {o,g};
 }
-function rowAt(t){
+function rowAt(at){
   const b=run.beat;
-  for(const r of run.rows){if(t>=r.start-.5*b&&t<r.start+run.rowDur-.5*b)return r;}
+  for(const r of run.rows){if(at>=r.start-.5*b&&at<r.start+run.rowDur-.5*b)return r;}
   return run.rows[run.rows.length-1];
 }
 
@@ -205,16 +204,16 @@ function frame(){
   const pos=(now-row.start)/run.beat;
   if(pos<0){
     const cb=Math.floor(pos+S.meter);
-    if(cb>=0)setStage(WORDS[cb],cb,'count');
+    if(cb>=0)setStage(t('count')[cb],cb,'count');
     showPh(null);
   }else if(pos<run.T){
     const bi=Math.floor(pos)%S.meter;showPh(pos);
     if(run.mode==='listen'){
       const i=row.P.findIndex(p=>pos>=p.start&&pos<p.start+p.d);highlight(i);
-      const p=row.P[i];if(p)setStage(p.s,bi,p.rest?'rest':'');
+      const p=row.P[i];if(p)setStage(syl(p.syl),bi,p.rest?'rest':'');
     }else{
       const st=run.stats,gr=st.good+st.ok+st.miss;
-      setStage(gr?`${st.good+st.ok} из ${gr}`:'стучи',bi,gr?'':'count small');
+      setStage(gr?t('score',{a:st.good+st.ok,n:gr}):t('tapNow'),bi,gr?'':'count small');
     }
   }else{showPh(null);highlight(-1);}
   requestAnimationFrame(frame);
@@ -223,7 +222,7 @@ function frame(){
 function finish(){
   const r=run;hardStop();setRunningUI(null);
   if(r.mode==='tap'){S.lastRow=r.rows[0];renderStrip();summary(r.stats,false);}
-  else{renderStrip();idle('Твой ход','Нажми «Стучать» и повтори этот ритм сам.','dim small');}
+  else{renderStrip();idle(t('yourTurn'),t('yourTurnHint'),'dim small');}
 }
 function userStop(){
   const r=run;if(!r)return;
@@ -232,50 +231,50 @@ function userStop(){
   const row=r.rows[r.cur];
   if(r.endless&&!S.custom)S.items=row.items;
   if(r.mode==='tap'){S.lastRow=r.endless?row:r.rows[0];renderStrip();summary(r.stats,r.endless);}
-  else{clearMarks();renderStrip();idle('та','Остановлено. Можно начать заново или взять новый ритм.');}
+  else{clearMarks();renderStrip();idle(syl('ta'),t('stopped'));}
 }
 function summary(st,endless){
   const n=st.good+st.ok+st.miss;
-  if(!n&&!st.extra){idle('Тишина','Стучи по площадке или пробелом, когда пойдёт ритм.','dim small');return;}
-  let h=(st.good===n&&!st.extra)?`Все ${n} в точку.`:`В точку ${st.good}, почти ${st.ok}, мимо ${st.miss}. Зелёные ноты — в точку, жёлтые — почти, красные — мимо.`;
-  if(st.extra)h+=` Лишних ударов: ${st.extra}.`;
+  if(!n&&!st.extra){idle(t('silence'),t('silenceHint'),'dim small');return;}
+  let h=(st.good===n&&!st.extra)?t('allGood',{n}):t('tally',{good:st.good,ok:st.ok,miss:st.miss});
+  if(st.extra)h+=t('extra',{n:st.extra});
   if(st.cnt>=3){const m=st.sum/st.cnt;
-    if(m>.06)h+=` В среднем ты позже щелчка на ${Math.round(m*1000)} мс. В Bluetooth-наушниках часть этого — их задержка.`;
-    else if(m<-.06)h+=` Ты чуть спешишь: в среднем на ${Math.round(-m*1000)} мс раньше.`;}
-  if(!endless)h+=' Дальше — «Новый ритм» или режим «Без конца».';
-  lastStage='';setStage(`${st.good+st.ok} из ${n}`,-1,'');hint.textContent=h;
+    if(m>.06)h+=t('late',{ms:Math.round(m*1000)});
+    else if(m<-.06)h+=t('early',{ms:Math.round(-m*1000)});}
+  if(!endless)h+=t('nextStep');
+  lastStage='';setStage(t('score',{a:st.good+st.ok,n}),-1,'');hint.textContent=h;
 }
 
 /* ---------- builder ---------- */
 function renderChips(){
   chipsEl.innerHTML='';
-  CHIP_ORDER.forEach(t=>{
-    if(TYPES[t].beats>S.meter)return;
-    const b=document.createElement('button');b.type='button';b.className='chip';b.id='chip-'+t;b.dataset.t=t;
-    b.setAttribute('aria-label',`Добавить: ${LABEL[t]}, ${plural(TYPES[t].beats)}`);
-    b.innerHTML=chipSvg(t)+`<span class="s">${LABEL[t]}</span>`;
-    b.addEventListener('click',()=>addPiece(t));chipsEl.appendChild(b);
+  CHIP_ORDER.forEach(type=>{
+    if(TYPES[type].beats>S.meter)return;
+    const b=document.createElement('button');b.type='button';b.className='chip';b.id='chip-'+type;b.dataset.t=type;
+    b.setAttribute('aria-label',t('addPiece',{piece:pieceName(type),len:clicks(TYPES[type].beats)}));
+    b.innerHTML=chipSvg(type)+`<span class="s">${pieceName(type)}</span>`;
+    b.addEventListener('click',()=>addPiece(type));chipsEl.appendChild(b);
   });
   updateChips();
 }
 function updateChips(){
   const u=used(),T=total(),left=S.meter-(u%S.meter);
-  [...chipsEl.children].forEach(b=>{const t=b.dataset.t;b.disabled=!!run||(S.custom&&(u>=T||TYPES[t].beats>left));});
+  [...chipsEl.children].forEach(b=>{const type=b.dataset.t;b.disabled=!!run||(S.custom&&(u>=T||TYPES[type].beats>left));});
   undoBtn.disabled=!!run||!S.custom||!S.items.length;
   clearBtn.disabled=!!run||(S.custom&&!S.items.length);
-  if(!S.custom)leftEl.textContent='Сейчас на дорожке случайный ритм.';
-  else leftEl.textContent=u<T?`Осталось ${plural(T-u)}.`:'Готово, жми «Слушать» или «Стучать».';
+  if(!S.custom)leftEl.textContent=t('randomOnTrack');
+  else leftEl.textContent=u<T?t('left',{left:clicks(T-u)}):t('ready');
 }
-function addPiece(t){
+function addPiece(type){
   if(run)return;
   if(!S.custom){S.items=[];S.custom=true;}
   clearMarks();
   const u=used(),T=total(),left=S.meter-(u%S.meter);
-  if(u>=T||TYPES[t].beats>left)return;
-  S.items.push({type:t,start:u});
+  if(u>=T||TYPES[type].beats>left)return;
+  S.items.push({type,start:u});
   renderStrip();updateChips();
-  if(used()===T)idle('Готово','Твой ритм. Послушай, как он звучит, или сразу стучи.','dim small');
-  else idle(LABEL[t],'Добавлено. Собирай дальше.','dim');
+  if(used()===T)idle(t('done'),t('doneHint'),'dim small');
+  else idle(pieceName(type),t('added'),'dim');
 }
 
 /* ---------- wiring ---------- */
@@ -287,40 +286,55 @@ function syncControls(){
   $('tapSnd').setAttribute('aria-pressed',String(S.tapSnd));
   bpmIn.value=S.bpm;bpmOut.textContent=S.bpm;
 }
+// Puts every fixed text on the page into the current language.
+function applyLang(){
+  setLang(S.lang);
+  document.documentElement.lang=S.lang;
+  document.title=t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});
+  document.querySelectorAll('[data-i18n-aria]').forEach(el=>{el.setAttribute('aria-label',t(el.dataset.i18nAria));});
+  meterBtns.forEach(b=>b.setAttribute('aria-label',t('meterBtn',{m:b.dataset.m})));
+  langBtns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lang===S.lang)));
+}
+langBtns.forEach(b=>b.addEventListener('click',()=>{
+  if(run||b.dataset.lang===S.lang)return;
+  S.lang=b.dataset.lang;save();applyLang();renderExplain();renderStrip();renderChips();
+  idle(syl('ta'),t('startHint'));
+}));
 meterBtns.forEach(b=>b.addEventListener('click',()=>{
   if(run)return;S.meter=+b.dataset.m;save();syncControls();renderDots();renderExplain();
   makeRhythm();renderStrip();renderChips();
-  idle('та',`Теперь ${S.meter}/4: в каждом такте ${NUM[S.meter]} щелчка. Нажми «Слушать».`);
+  idle(syl('ta'),t('meterNow',{m:S.meter,num:t('num')[S.meter]}));
 }));
 lvBtns.forEach(b=>b.addEventListener('click',()=>{
   if(run)return;S.level=+b.dataset.l;save();syncControls();
   makeRhythm();renderStrip();updateChips();
-  idle('та',S.level===1?'Только длинные и короткие ноты и паузы.':S.level===2?'Добавились ти-ти: два звука на один щелчок.':'Добавились там-ти: длинный звук и короткий, на два щелчка.');
+  idle(syl('ta'),t('lvHint'+S.level));
 }));
 viewBtns.forEach(b=>b.addEventListener('click',()=>{S.view=b.dataset.v;save();syncControls();renderStrip();}));
 btnEndless.addEventListener('click',()=>{
   if(run)return;S.endless=!S.endless;save();syncControls();renderStrip();
-  idle('та',S.endless?(S.custom?'Твой ритм будет крутиться по кругу, пока не нажмёшь «Стоп».':'Ритмы пойдут подряд без остановки, следующая строчка видна заранее.'):'Один ритм и стоп, потом оценка.');
+  idle(syl('ta'),t(S.endless?(S.custom?'endlessCustom':'endlessRandom'):'endlessOff'));
 });
 $('tapSnd').addEventListener('click',()=>{S.tapSnd=!S.tapSnd;save();syncControls();});
 bpmIn.addEventListener('input',()=>{S.bpm=+bpmIn.value;bpmOut.textContent=S.bpm;save();});
 btnListen.addEventListener('click',()=>{if(run&&run.mode==='listen')userStop();else start('listen');});
 btnTap.addEventListener('click',()=>{if(run&&run.mode==='tap')userStop();else start('tap');});
-btnFresh.addEventListener('click',()=>{if(run)return;makeRhythm();renderStrip();updateChips();idle('та','Новый случайный ритм. Сначала послушай или сразу стучи.');});
-undoBtn.addEventListener('click',()=>{if(run||!S.custom)return;S.items.pop();clearMarks();renderStrip();updateChips();idle('та','Последний кусочек убран.');});
-clearBtn.addEventListener('click',()=>{if(run)return;S.items=[];S.custom=true;clearMarks();renderStrip();updateChips();idle('та','Дорожка пустая. Нажимай кусочки внизу.');});
+btnFresh.addEventListener('click',()=>{if(run)return;makeRhythm();renderStrip();updateChips();idle(syl('ta'),t('freshHint'));});
+undoBtn.addEventListener('click',()=>{if(run||!S.custom)return;S.items.pop();clearMarks();renderStrip();updateChips();idle(syl('ta'),t('undone'));});
+clearBtn.addEventListener('click',()=>{if(run)return;S.items=[];S.custom=true;clearMarks();renderStrip();updateChips();idle(syl('ta'),t('cleared'));});
 
 function tap(){
   if(!ensureAudio())return;
   if(S.tapSnd)tapSound();
   if(!(run&&run.mode==='tap')){flash('');return;}
-  const t=ctx.currentTime-run.lat;
-  if(t<run.rows[0].start-.5*run.beat){flash('');return;}
-  const m=matchTap(t);
+  const at=ctx.currentTime-run.lat;
+  if(at<run.rows[0].start-.5*run.beat){flash('');return;}
+  const m=matchTap(at);
   let row,extra;
   if(m){row=m.o.row;extra=false;flash(m.g);}
-  else{row=rowAt(t);extra=true;run.stats.extra++;flash('miss');}
-  const pos=(t-row.start)/run.beat;
+  else{row=rowAt(at);extra=true;run.stats.extra++;flash('miss');}
+  const pos=(at-row.start)/run.beat;
   if(pos>-.7&&pos<run.T+.5){const tk={pos,extra};row.ticks.push(tk);tickDom(row,tk);}
 }
 stage.addEventListener('pointerdown',e=>{e.preventDefault();tap();});
@@ -341,5 +355,5 @@ let rz=0;
 if('ResizeObserver' in window){new ResizeObserver(()=>{cancelAnimationFrame(rz);rz=requestAnimationFrame(renderStrip);}).observe(stripEl);}
 else window.addEventListener('resize',renderStrip);
 
-syncControls();renderDots();renderExplain();makeRhythm();renderStrip();renderChips();
-idle('та','Нажми «Слушать», а потом «Стучать» и повтори сам.');
+applyLang();syncControls();renderDots();renderExplain();makeRhythm();renderStrip();renderChips();
+idle(syl('ta'),t('startHint'));

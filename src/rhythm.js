@@ -1,16 +1,16 @@
 // Rhythm model and random generator. Pure functions: no DOM, no audio.
 // Durations are in beats (one beat = one quarter note = one metronome click).
+// k is the syllable key; the words themselves live in i18n.js (syl).
 
 export const TYPES={
-  ta:   {beats:1, parts:[{d:1,s:'та'}]},
-  titi: {beats:1, parts:[{d:.5,s:'ти'},{d:.5,s:'ти'}]},
-  taa:  {beats:2, parts:[{d:2,s:'та-а'}]},
-  taaa: {beats:3, parts:[{d:3,s:'та-а-а'}]},
-  taaaa:{beats:4, parts:[{d:4,s:'та-а-а-а'}]},
-  rest: {beats:1, parts:[{d:1,s:'ш',rest:true}]},
-  tamti:{beats:2, parts:[{d:1.5,s:'там'},{d:.5,s:'ти'}]}
+  ta:   {beats:1, parts:[{d:1,k:'ta'}]},
+  titi: {beats:1, parts:[{d:.5,k:'ti'},{d:.5,k:'ti'}]},
+  taa:  {beats:2, parts:[{d:2,k:'taa'}]},
+  taaa: {beats:3, parts:[{d:3,k:'taaa'}]},
+  taaaa:{beats:4, parts:[{d:4,k:'taaaa'}]},
+  rest: {beats:1, parts:[{d:1,k:'sh',rest:true}]},
+  tamti:{beats:2, parts:[{d:1.5,k:'tam'},{d:.5,k:'ti'}]}
 };
-export const LABEL={ta:'та',titi:'ти-ти',taa:'та-а',taaa:'та-а-а',taaaa:'та-а-а-а',rest:'пауза',tamti:'там-ти'};
 export const CHIP_ORDER=['ta','titi','taa','taaa','taaaa','rest','tamti'];
 export const LEVELS={1:['ta','taa','taaa','taaaa','rest'],2:['ta','titi','taa','taaa','taaaa','rest'],3:['ta','titi','taa','taaa','taaaa','rest','tamti']};
 // How often each piece is picked by the generator.
@@ -24,7 +24,7 @@ export const beatsOf=items=>items.reduce((a,it)=>a+TYPES[it.type].beats,0);
 // Items → individual sounds (ti-ti and tam-ti are two sounds each).
 export function partsOf(items){
   const out=[];
-  items.forEach((it,ii)=>{let p=it.start;TYPES[it.type].parts.forEach((pt,k)=>{out.push({type:it.type,ii,k,start:p,d:pt.d,s:pt.s,rest:!!pt.rest});p+=pt.d;});});
+  items.forEach((it,ii)=>{let p=it.start;TYPES[it.type].parts.forEach((pt,k)=>{out.push({type:it.type,ii,k,start:p,d:pt.d,syl:pt.k,rest:!!pt.rest});p+=pt.d;});});
   return out;
 }
 

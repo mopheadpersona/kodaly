@@ -1,5 +1,6 @@
 // Rhythm notation as SVG strings: data in, markup out. No DOM access.
 import {TYPES,BARS,beatsOf} from './rhythm.js';
+import {t,syl} from './i18n.js';
 
 // One piece (ta, ti-ti, …) on the one-line staff. xs: x of each sound, idx: index of each sound in the line.
 export function svgItem(type,xs,ly,st,sc,idx,gr){
@@ -34,7 +35,7 @@ export function geo(W,T,view){
 // A whole line. showSlots: draw empty dashed slots for beats not filled yet (only when nothing plays).
 export function rowSvg(row,G,{isNext,endless,meter,showSlots}){
   const {W,T,ppb,notes,sc,off,ly,st,H,bl}=G;const P=row.P;
-  let s=`<svg class="row${isNext?' next':''}" data-row="${row.id}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${isNext?'Дальше':'Ритм'}: ${P.map(p=>p.s).join(', ')}">`;
+  let s=`<svg class="row${isNext?' next':''}" data-row="${row.id}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${isNext?t('rowNext'):t('rowNow')}: ${P.map(p=>syl(p.syl)).join(', ')}">`;
   s+=`<line class="staff" x1="0" y1="${ly}" x2="${W}" y2="${ly}"/>`;
   for(let b=1;b<BARS[meter];b++){
     const x=b*meter*ppb;
@@ -44,7 +45,7 @@ export function rowSvg(row,G,{isNext,endless,meter,showSlots}){
   if(endless)s+=`<line class="bar" x1="${W-1}" y1="${ly-bl}" x2="${W-1}" y2="${ly+bl}"/>`;
   else s+=`<line class="bar" x1="${W-6.5}" y1="${ly-bl}" x2="${W-6.5}" y2="${ly+bl}"/><line class="bar-end" x1="${W-2}" y1="${ly-bl}" x2="${W-2}" y2="${ly+bl}"/>`;
   for(let k=0;k<T;k++){const n=k%meter;s+=`<text class="cnt${n===0?' one':''}" x="${k*ppb+off}" y="16" text-anchor="middle">${n+1}</text>`;}
-  P.forEach(p=>{if(p.start%1===.5)s+=`<text class="cnt" x="${p.start*ppb+off}" y="16" text-anchor="middle">и</text>`;});
+  P.forEach(p=>{if(p.start%1===.5)s+=`<text class="cnt" x="${p.start*ppb+off}" y="16" text-anchor="middle">${t('and')}</text>`;});
   row.items.forEach((it,ii)=>{
     const idx=[],xs=[];P.forEach((p,i)=>{if(p.ii===ii){idx.push(i);xs.push(p.start*ppb+off);}});
     s+=svgItem(it.type,xs,ly,st,sc,idx,row.grades);
@@ -52,7 +53,7 @@ export function rowSvg(row,G,{isNext,endless,meter,showSlots}){
   const fs=G.fs.toFixed(1);
   P.forEach((p,i)=>{
     if(!notes){const x=p.start*ppb+2,w=Math.max(4,p.d*ppb-4);s+=`<rect class="blk${p.rest?' rest':''}" data-i="${i}" x="${x}" y="${G.by}" width="${w}" height="${G.bh}" rx="6"/>`;}
-    s+=`<text class="syl${p.rest?' rest':''}" x="${p.start*ppb+(notes?Math.max(1,off-6*sc):3)}" y="${G.sylY}" font-size="${fs}">${p.s}</text>`;
+    s+=`<text class="syl${p.rest?' rest':''}" x="${p.start*ppb+(notes?Math.max(1,off-6*sc):3)}" y="${G.sylY}" font-size="${fs}">${syl(p.syl)}</text>`;
   });
   if(showSlots){for(let k=beatsOf(row.items);k<T;k++){
     if(notes)s+=`<rect class="slot" x="${k*ppb+3}" y="${ly-20}" width="${Math.max(4,ppb-6)}" height="34" rx="6"/>`;
