@@ -1,0 +1,9 @@
+{
+  "name": "kodaly",
+  "private": true,
+  "description": "Ta-ti-ti: a rhythm toy with Kodály syllables. Static site, no build.",
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}

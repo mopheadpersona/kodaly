@@ -139,6 +139,8 @@ const D={
   }
 };
 
+export {D as DICT}; // for tests
+
 // Text for a key in the current language. Arrays and maps (count, syl, …) come back as they are.
 export function t(key,vars,l=lang){
   const s=D[l][key]??D.en[key];

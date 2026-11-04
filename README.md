@@ -24,6 +24,14 @@ python3 -m http.server 8000
 
 Then open http://localhost:8000. Opening `index.html` straight from disk does not work: browsers do not load ES modules from `file://`.
 
+## Tests
+
+```bash
+npm test
+```
+
+Node's built-in test runner; nothing to install. The tests cover the rhythm generator, tap grading and the texts in both languages.
+
 ## How it is built
 
 A static site: plain HTML, CSS and ES modules. No framework, no build step, no dependencies.
@@ -37,6 +45,7 @@ A static site: plain HTML, CSS and ES modules. No framework, no build step, no d
 | `src/grading.js` | Tap grading |
 | `src/notation.js` | Rhythm notation as SVG |
 | `src/i18n.js` | All texts in English and Russian |
+| `tests/` | Tests for the modules above |
 
 Every push to `main` is published by GitHub Pages.
 

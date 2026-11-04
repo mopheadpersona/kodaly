@@ -9,9 +9,9 @@ Written 4 November 2026, updated as steps land. Context and rules: [CLAUDE.md](.
 | 0–1. `CLAUDE.md`, git | done |
 | 2. Split into files | done — notation, chips and texts match the prototype byte for byte |
 | 3. English and Russian | done — English by default; the Russian version renders exactly like the prototype |
-| 4. Tests | next |
+| 4. Tests | done — 25 tests, `npm test`, about a second |
 | 5. Hosting | done — GitHub Pages, https://mopheadpersona.github.io/kodaly/ |
-| 6. Home screen and offline | after tests |
+| 6. Home screen and offline | next |
 | Version 2: harder rhythms | not started, only when asked |
 
 ## How it works day to day
@@ -75,14 +75,16 @@ How behaviour was kept: code moved as is; functions that read global state now t
 - English by default. A Russian phone also opens in English first.
 - Checked: the Russian version gives the same 15 fingerprints as the prototype; the English one was read through and run; both fit a 375 px screen without horizontal scroll.
 
-## Step 4. Tests — next
+## Step 4. Tests — done
 
-`node --test`, no libraries. A `package.json` with only `"type": "module"` and a `test` script.
+`npm test` runs `node --test`: no libraries. `package.json` only sets `"type": "module"` and the `test` script.
 
-- **Generator**: every meter × every level × thousands of runs. Each bar is filled exactly; no piece crosses a bar line; no rest first; no two rests in a row; ta-a-a-a only at the start of a bar.
-- **Grading**: 0 and ±70 ms — on the beat; ±70.1 and ±150 ms — close; ±150.1 ms — miss. Window: min(280 ms, 48% of the gap to the neighbour).
-- **Plurals**: 1, 2, 5, 11, 21, 22, 112 in Russian; 1 and 2 in English.
+- **Generator** (`tests/rhythm.test.js`): every meter × every level × 2000 lines from a seeded random source, so a failure can be reproduced. Each bar is filled exactly; pieces follow without gaps; no piece crosses a bar line; no rest first; no two rests in a row; ta-a-a-a only at the start of a bar; only the level's pieces. Plus `partsOf` splitting ti-ti and tam-ti.
+- **Grading** (`tests/grading.test.js`): 0 and ±70 ms — on the beat; ±70.1 and ±150 ms — close; ±150.1 ms — miss. Window: capped at 280 ms, otherwise 48% of the gap to the closer neighbour. Matching picks the closest ungraded note, skips graded ones, ignores taps outside every window.
+- **Texts** (`tests/i18n.test.js`): Russian plurals (1, 2, 5, 11, 21, 22, 112…) and the same result as the prototype's formula for every number 0–1000; English plurals; both dictionaries have the same keys, shapes and `{placeholders}`; the agreed syllables, count words and "&"/"и".
 - Sound and screen are not covered by tests — they are checked in the browser.
+
+The tests were checked by breaking the code on purpose in a copy: making 70 or 150 ms exclusive, moving the threshold to 80 ms, removing the 280 ms cap, allowing a rest first, two rests in a row, a piece across the bar line, dropping a Russian text, changing an English syllable — each made a test fail. The one change that failed nothing — dropping the "ta-a-a-a only at a bar start" rule — is harmless: a 4-beat piece only fits at the start of a 4/4 bar anyway.
 
 ## Step 5. Hosting — done
 
