@@ -11,7 +11,7 @@ Written 4 November 2026, updated as steps land. Context and rules: [CLAUDE.md](.
 | 3. English and Russian | done — English by default; the Russian version renders exactly like the prototype |
 | 4. Tests | done — 25 tests, `npm test`, about a second |
 | 5. Hosting | done — GitHub Pages, https://mopheadpersona.github.io/kodaly/ |
-| 6. Home screen and offline | next |
+| 6. Home screen and offline | done — icon "ta ti-ti", fonts in the project, service worker; checked offline in the browser |
 | Version 2: harder rhythms | not started, only when asked |
 
 ## How it works day to day
@@ -41,7 +41,7 @@ Things noticed (not bugs, nothing to fix now):
 
 1. **Generator.** It makes up to 40 tries to get a "good" line (has ti-ti on level 2, does not end on a rest). If all 40 fail it returns the last one. In practice this does not happen. Tests should check only what always holds: bars are filled exactly, no rest first, no two rests in a row, no piece crosses a bar line.
 2. **Tap time** is the audio clock when the tap is handled, not the moment of the touch itself. That adds a few milliseconds of error, fine for a 70 ms "on the beat". It could be refined later, but that changes behaviour — only if the user asks.
-3. **Headphone latency.** The app subtracts `outputLatency`. If Safari does not report it, zero is subtracted, so with Bluetooth headphones on iPhone taps look late. The summary hint about headphones covers exactly this. To check on the user's iPhone.
+3. **Headphone latency.** The app subtracts `outputLatency`, read once when "Tap" starts. If the browser does not report it, zero is subtracted, so with Bluetooth headphones taps look late. The summary hint about headphones covers exactly this. Seen on the Mac with Bluetooth output (`outputLatency` 168 ms): the "on the beat" centre for taps moved between 0 and +130 ms from one page load to another — in the prototype too. A possible fix later (only if the user asks): read the latency on every frame instead of once, or offer a one-tap calibration. To check on the user's iPhone.
 4. **Silent mode.** Newer Safari has `navigator.audioSession`; setting its type to `playback` may let sound play in silent mode. Worth a small separate try. The hint stays either way.
 5. **Fonts** come from Google Fonts. Offline, system fonts show instead. Step 6 fixes that.
 6. **Hidden tab.** When the tab is not visible the browser slows down drawing. The sound stays exact; only the highlighting lags. That is normal.
@@ -100,16 +100,16 @@ Chosen: **GitHub Pages**, public repo `mopheadpersona/kodaly`, branch `main`, ro
 
 The site lives under `/kodaly/`, not at the domain root. All paths in the project are relative, and step 6 (icons, service worker scope) has to keep that in mind.
 
-## Step 6. Home screen and offline
+## Step 6. Home screen and offline — done
 
-- `manifest.webmanifest`: name "Ta-ti-ti", standalone display without the address bar, theme colours, icons 192 and 512.
-- `apple-touch-icon` 180×180 — iPhone takes the icon from here, not from the manifest. A simple icon in the app's style (a note or "ta"), shown to the user before committing.
-- `sw.js` service worker: caches every app file, the fonts and icons; serves from cache and fetches the new version in the background. A new version shows from the next launch. The cache version changes with every deploy.
-- Fonts served locally from `fonts/`: Unbounded, Golos Text, IBM Plex Mono, Latin + Cyrillic, about 10 woff2 files. All three are under the OFL, so they may live in the repo. The Google Fonts link goes away: faster, and works offline.
-- GitHub Pages sends `Cache-Control: max-age=600`, so after a deploy a browser may keep old files for up to 10 minutes, and a module can come from the old cache while another is new. When a new service worker installs, it should fetch files with `cache: 'reload'` so it does not store the stale copies.
-- A service worker needs HTTPS, so this comes after hosting. It also goes last because the cache gets in the way of seeing fresh versions during development.
+- **Icon.** Three options were shown; the user chose "ta ti-ti": ta in the orange accent, ti-ti in dark, on the light background and staff line — like the app while playing. Source `icons/icon.svg`; PNGs 180 (`apple-touch-icon.png`, which iPhone uses), 192, 512 and a maskable 512 with the picture shrunk to 82% for Android's round masks. Rendered with macOS Quick Look: `qlmanage -t -s <size> -o <dir> icon.svg`.
+- **Manifest** `manifest.webmanifest`: name "Ta-ti-ti", standalone display, light theme colours, start URL and scope `./` (the site lives under `/kodaly/`). `index.html` adds the Apple tags, theme colours for light and dark, and the favicon.
+- **Fonts** in `fonts/`: Unbounded and Golos Text are variable fonts (one file covers every weight), IBM Plex Mono has a file per weight; Latin and Cyrillic only, 8 woff2 files, 170 KB, with their OFL licences. The Google Fonts link is gone. The Cyrillic files load only when Russian text is on screen, so the service worker caches them up front.
+- **Service worker** `sw.js`: on install it downloads all 22 files of the app into a cache named after `VERSION`; the page itself and every file are then served from that cache, online and offline. Install uses `cache: 'reload'`, because GitHub Pages lets browsers keep files for 10 minutes (`max-age=600`) and a new version must not mix in stale copies. A new `VERSION` installs a complete fresh copy, takes over at once and deletes the old cache; the page that is already open keeps its loaded code, and the next launch is fully new.
+- **Version = hash of the files.** `npm run stamp` writes a hash of all cached files into `sw.js`. `tests/sw.test.js` fails if the hash is stale, if a cached file is missing, or if the page, a module, `fonts.css` or the manifest loads a file that is not in the list. Each of those checks was seen to fail on purpose (a font dropped from the list, an edit without stamping).
+- **Development.** The service worker is off on localhost unless the URL has `?sw`, and a leftover one is removed, so edits show at once. `scripts/serve.py` is `http.server` with `Cache-Control: no-store`: the stock server let the browser reuse an old `app.js`, which hid the service worker during testing.
+- **Checked offline** in the browser: `/?sw` installed the worker and cached 22 files; with the server stopped, a reload opened the app from the cache, with its own fonts in both languages; "Listen", "Tap", "Endless" and "Build your own" worked; no errors.
 - On iPhone, the Home Screen app keeps its settings separately from Safari: meter, tempo, view and language have to be picked once more.
-- Check: airplane mode → open from the Home Screen → everything works, with its own fonts.
 
 ## Version 2: harder rhythms
 
@@ -144,7 +144,9 @@ Later chapters of the book (sixteenths, 6/8, syncopation) are not in `reference/
 - Silent mode: the hint is there; with sound on, everything plays.
 - With Bluetooth headphones and without: what average offset the "Tap" summary shows.
 - Light and dark theme, English and Russian.
-- After step 6: install to the Home Screen, launch in airplane mode, update after a deploy.
+- Home Screen: Safari → Share → Add to Home Screen; the icon and the name "Ta-ti-ti"; it opens without the address bar.
+- Offline: open it once online, then airplane mode → open from the Home Screen → it plays, with its own fonts.
+- Updates: after a deploy, the change shows on the second launch (the first one downloads it).
 
 ## Open questions
 

@@ -20,7 +20,8 @@ What the app does:
 - Views: "Notes only" (default) and "With blocks" (sound length, like a piano roll).
 - Two languages, English by default; EN/RU switch in the header. The choice is saved and sets `<html lang>`.
 - Settings are stored in `localStorage` under the key `tatiti`.
-- Light and dark themes; fonts Unbounded, Golos Text and IBM Plex Mono.
+- Light and dark themes; fonts Unbounded, Golos Text and IBM Plex Mono, served from `fonts/`.
+- Installs to the iPhone Home Screen (manifest, icon "ta ti-ti") and works offline (service worker `sw.js`).
 
 ## Decisions not to change without asking
 
@@ -40,14 +41,20 @@ These come from how the user actually plays with it:
 - Small commits, so any version can be restored.
 - Ask before deploying anything new and before buying or setting up anything external. Pushing to `main` redeploys the site — that is the agreed routine.
 - Static site: no backend, no framework, no build step.
+- After changing any file the app loads (page, styles, `src/`, fonts, icons, manifest): run `npm run stamp`. It puts a new version into `sw.js`, so phones download the update. `npm test` fails until it is done.
 - Before every commit: run `npm test`, then open the page and check that "Listen", "Tap", "Endless" and "Build your own" work, in both languages.
+- A new file the app loads must be added to `FILES` in `sw.js`, or it will be missing offline. A test checks this.
 - Work on `main` (the user's choice).
 
 ## How to check
 
 On a real iPhone in Safari — with Bluetooth headphones and without; on a computer in Chrome and Safari; in light and dark theme.
 
-Locally: run `python3 -m http.server 8000` in the project root and open http://localhost:8000. ES modules do not load from `file://`. For Claude's built-in browser there is `.claude/launch.json` (port 5317).
+Locally: run `python3 scripts/serve.py` and open http://localhost:8000. It is `http.server` with caching turned off, so edits show on a plain reload (with the stock server the browser can keep stale modules). ES modules do not load from `file://`. For Claude's built-in browser there is `.claude/launch.json` (port 5317).
+
+The service worker is off on localhost so edits show at once; add `?sw` to the URL to test it. To test offline: open `/?sw`, wait until it is installed, stop the server, reload — the app must still open, play and switch languages.
+
+Synthetic taps in the browser (key events timed with `performance.now()`) only line up with the notes when the Mac's audio output has low latency. With Bluetooth output (`outputLatency` about 170 ms) the "on the beat" centre moved between 0 and +130 ms from one page load to another — in the prototype as well. That is a property of how the browser reports latency, not a bug in grading.
 
 Useful check after a refactor: build the same rhythms with the chips and compare the SVG of the strip before and after — it should match byte for byte. The Russian version must still render exactly like the prototype.
 
@@ -59,7 +66,7 @@ Useful check after a refactor: build the same rhythms with the chips and compare
 - [x] 3. Two languages. English by default, EN/RU switch in the header; the choice is remembered and sets `<html lang>`. All texts in a dictionary. English syllables in Latin letters (ta, ti-ti, ta-a, ta-a-a, ta-a-a-a, sh, tam-ti), count one/two/three/four and "&" instead of "и". Plurals via `Intl.PluralRules` (щелчок/щелчка/щелчков vs click/clicks). English texts are as plain and short as the Russian ones, no marketing.
 - [x] 4. Tests for pure functions: `npm test` (Node's built-in runner, no dependencies), files in `tests/`. Generator rules over 18 000 seeded lines (bars filled exactly, no rest first, no two rests in a row, nothing crosses a bar line, only the level's pieces); grading at the 70 and 150 ms boundaries and the search window; plurals (Russian checked against the prototype's formula for 0–1000); both languages have the same keys and placeholders; agreed syllables in both languages.
 - [x] 5. Deploy. GitHub Pages from the public repo `mopheadpersona/kodaly`, branch `main`, root folder. Site: https://mopheadpersona.github.io/kodaly/ (HTTPS). Every push to `main` redeploys. Own domain — later.
-- [ ] 6. Home screen. Manifest, icon and service worker, so the app installs on iPhone as a standalone app and works offline (in the metro). Fonts cached or served locally.
+- [x] 6. Home screen. `manifest.webmanifest`, icons in `icons/` (the user chose "ta ti-ti": ta in orange, ti-ti in dark on the light background, as while playing), Apple tags in `index.html`, fonts served from `fonts/`, service worker `sw.js` caching all 22 files (253 KB). Checked offline in the browser: with the server stopped the app opened, played, graded taps and switched languages.
 
 ## Version 2 and later (do not start without being asked)
 
@@ -74,7 +81,11 @@ The user wants harder rhythms later — that is the next version. What chapter 1
 - `src/grading.js` — tap grading: window, grade, matching. Pure.
 - `src/notation.js` — SVG notation: data in, markup out.
 - `src/i18n.js` — every text in English and Russian, syllables, plurals.
-- `tests/` — tests for the pure modules; `package.json` only sets ES modules and the `test` script.
+- `tests/` — tests for the pure modules and for the service worker's file list and version; `package.json` only sets ES modules and the `test` and `stamp` scripts.
+- `sw.js` — service worker: the list of cached files and their version.
+- `manifest.webmanifest`, `icons/` — Home Screen name and icons (`icon.svg` is the source; PNGs rendered with `qlmanage -t -s <size>`).
+- `fonts/` — woff2 files (Latin and Cyrillic), `fonts.css`, OFL licences.
+- `scripts/` — `stamp.mjs` (`npm run stamp`), `sw-version.mjs` (shared with the tests), `serve.py` (dev server without caching).
 - `reference/` — the book (PDF, chapter 1 only). Not in git: it is copyrighted and the repository is public. Do not copy the book's exercises into the app one to one — take from it which elements come in which order, and generate our own rhythms.
 - `docs/plan.md` — analysis and plan.
 - `README.md`, `README.ru.md` — the GitHub front page in English and Russian.

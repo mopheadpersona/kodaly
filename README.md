@@ -16,13 +16,17 @@ A small rhythm toy for learning to read rhythm with Kodály syllables — ta, ti
 
 On iPhone, turn off silent mode: it mutes web audio.
 
+## Put it on the iPhone Home Screen
+
+Open the link in Safari → Share → **Add to Home Screen**. It then starts like an app, without the address bar, and works offline — in the metro, in airplane mode. Updates arrive on their own: the next launch after a change uses the new version.
+
 ## Run it locally
 
 ```bash
-python3 -m http.server 8000
+python3 scripts/serve.py
 ```
 
-Then open http://localhost:8000. Opening `index.html` straight from disk does not work: browsers do not load ES modules from `file://`.
+Then open http://localhost:8000. This is Python's `http.server` with caching turned off, so edits show on reload. Opening `index.html` straight from disk does not work: browsers do not load ES modules from `file://`. The offline cache is off on localhost; add `?sw` to the address to try it.
 
 ## Tests
 
@@ -30,7 +34,9 @@ Then open http://localhost:8000. Opening `index.html` straight from disk does no
 npm test
 ```
 
-Node's built-in test runner; nothing to install. The tests cover the rhythm generator, tap grading and the texts in both languages.
+Node's built-in test runner; nothing to install. The tests cover the rhythm generator, tap grading, the texts in both languages, and the offline cache.
+
+After changing any file the app loads, run `npm run stamp`: it gives the offline cache a new version, so phones pick up the change. The tests fail until you do.
 
 ## How it is built
 
@@ -45,7 +51,11 @@ A static site: plain HTML, CSS and ES modules. No framework, no build step, no d
 | `src/grading.js` | Tap grading |
 | `src/notation.js` | Rhythm notation as SVG |
 | `src/i18n.js` | All texts in English and Russian |
-| `tests/` | Tests for the modules above |
+| `sw.js` | Offline cache: which files to keep, and their version |
+| `manifest.webmanifest`, `icons/` | Home Screen name and icons |
+| `fonts/` | Unbounded, Golos Text, IBM Plex Mono (SIL Open Font License) |
+| `tests/` | Tests |
+| `scripts/` | `npm run stamp`, local dev server |
 
 Every push to `main` is published by GitHub Pages.
 
