@@ -106,6 +106,7 @@ The site lives under `/kodaly/`, not at the domain root. All paths in the projec
 - `apple-touch-icon` 180×180 — iPhone takes the icon from here, not from the manifest. A simple icon in the app's style (a note or "ta"), shown to the user before committing.
 - `sw.js` service worker: caches every app file, the fonts and icons; serves from cache and fetches the new version in the background. A new version shows from the next launch. The cache version changes with every deploy.
 - Fonts served locally from `fonts/`: Unbounded, Golos Text, IBM Plex Mono, Latin + Cyrillic, about 10 woff2 files. All three are under the OFL, so they may live in the repo. The Google Fonts link goes away: faster, and works offline.
+- GitHub Pages sends `Cache-Control: max-age=600`, so after a deploy a browser may keep old files for up to 10 minutes, and a module can come from the old cache while another is new. When a new service worker installs, it should fetch files with `cache: 'reload'` so it does not store the stale copies.
 - A service worker needs HTTPS, so this comes after hosting. It also goes last because the cache gets in the way of seeing fresh versions during development.
 - On iPhone, the Home Screen app keeps its settings separately from Safari: meter, tempo, view and language have to be picked once more.
 - Check: airplane mode → open from the Home Screen → everything works, with its own fonts.
