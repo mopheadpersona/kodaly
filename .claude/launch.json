@@ -4,7 +4,7 @@
     {
       "name": "kodaly",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "5317", "--bind", "127.0.0.1"],
+      "runtimeArgs": ["scripts/serve.py", "5317"],
       "port": 5317
     }
   ]

@@ -355,5 +355,13 @@ let rz=0;
 if('ResizeObserver' in window){new ResizeObserver(()=>{cancelAnimationFrame(rz);rz=requestAnimationFrame(renderStrip);}).observe(stripEl);}
 else window.addEventListener('resize',renderStrip);
 
+// Offline: sw.js keeps every file of the app. On localhost it is off (unless the URL has ?sw),
+// so edits show at once; a worker left over from testing there is removed.
+if('serviceWorker' in navigator){
+  const devHost=/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  if(!devHost||new URLSearchParams(location.search).has('sw'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+  else navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+}
+
 applyLang();syncControls();renderDots();renderExplain();makeRhythm();renderStrip();renderChips();
 idle(syl('ta'),t('startHint'));
